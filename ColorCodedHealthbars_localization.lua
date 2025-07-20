@@ -7,9 +7,9 @@ local localization = {
 		ru = "Цветные полоски здоровья (Автономные с проверкой видимости)",
 	},
 	mod_description = {
-		en = "Show color-coded healthbars based on enemy breed type with subcategory support, enemy names, tag indicators, and line-of-sight visibility checking - No external dependencies required. Elite Ranged (Dark Orange), Elite Melee (Orange), Special Snipers (Pink), Special Disablers (Purple), Generic Specials (Magenta), etc.",
-		["zh-cn"] = "根据敌人类型显示彩色编码血条，支持子类别、敌人名称、标签指示器和视线可见性检查 - 无需外部依赖。精英远程（深橙色），精英近战（橙色），专家狙击手（粉色），专家控制（紫色），通用专家（洋红色）等",
-		ru = "Показывает цветные полоски здоровья на основе типа врага с поддержкой подкategorий, имен врагов, индикаторов тегов и проверки видимости - Не требует внешних зависимостей. Элитные дальние (Тёмно-оранжевый), Элитные ближние (Оранжевый), Снайперы (Розовый), Контроллеры (Фиолетовый), Обычные специалисты (Пурпурный) и т.д.",
+		en = "Show color-coded healthbars based on enemy breed type with subcategory support, enemy names, tag indicators, and line-of-sight visibility checking - No external dependencies required. Elite Ranged (Dark Orange), Elite Melee (Orange), Special Snipers (Pink), Special Disablers (Purple), Generic Specials (Magenta), etc. FIXED: Captain color formula and cultist_captain detection!",
+		["zh-cn"] = "根据敌人类型显示彩色编码血条，支持子类别、敌人名称、标签指示器和视线可见性检查 - 无需外部依赖。精英远程（深橙色），精英近战（橙色），专家狙击手（粉色），专家控制（紫色），通用专家（洋红色）等。已修复：队长颜色公式和邪教队长检测！",
+		ru = "Показывает цветные полоски здоровья на основе типа врага с поддержкой подкategorий, имен врагов, индикаторов тегов и проверки видимости - Не требует внешних зависимостей. Элитные дальние (Тёмно-оранжевый), Элитные ближние (Оранжевый), Снайперы (Розовый), Контроллеры (Фиолетовый), Обычные специалисты (Пурпурный) и т.д. ИСПРАВЛЕНО: Формула цвета капитана и обнаружение культистских капитанов!",
 	},
 	general_settings = {
 		en = "General Settings",
@@ -30,6 +30,11 @@ local localization = {
 		en = "Show Enemy Names",
 		["zh-cn"] = "显示敌人名称",
 		ru = "Показать имена врагов",
+	},
+	show_names_only = {
+		en = "Show Names Only (No Health Bars)",
+		["zh-cn"] = "仅显示名称（无血条）",
+		ru = "Показать только имена (без полосок здоровья)",
 	},
 	show_tag_indicators = {
 		en = "Show Tag Indicators",
@@ -197,6 +202,12 @@ local localization = {
 		["zh-cn"] = "基础颜色设置",
 		ru = "Основные настройки цвета",
 	},
+	-- NEW: Captain color settings
+	captain_color_settings = {
+		en = "Captain Color Settings",
+		["zh-cn"] = "队长颜色设置（已修复）",
+		ru = "Настройки цвета капитанов (ИСПРАВЛЕНО)",
+	},
 	elite_subcategory_colors = {
 		en = "Elite Subcategory Colors",
 		["zh-cn"] = "精英子类别颜色",
@@ -221,6 +232,22 @@ local localization = {
 		en = "Horde Blue Component",
 		["zh-cn"] = "群怪蓝色分量",
 		ru = "Синяя составляющая орды",
+	},
+	-- NEW: Captain color components
+	captain_color_r = {
+		en = "Captain Red Component",
+		["zh-cn"] = "队长红色分量（已修复）",
+		ru = "Красная составляющая капитана (ИСПРАВЛЕНО)",
+	},
+	captain_color_g = {
+		en = "Captain Green Component",
+		["zh-cn"] = "队长绿色分量（已修复）",
+		ru = "Зелёная составляющая капитана (ИСПРАВЛЕНО)",
+	},
+	captain_color_b = {
+		en = "Captain Blue Component",
+		["zh-cn"] = "队长蓝色分量（已修复）",
+		ru = "Синяя составляющая капитана (ИСПРАВЛЕНО)",
 	},
 	elite_melee_color_r = {
 		en = "Elite Melee Red",
@@ -283,6 +310,36 @@ local localization = {
 		["zh-cn"] = "专家狙击手蓝色",
 		ru = "Синий специальных снайперов",
 	},
+	special_pox_hound_color_r = {
+		en = "Pox Hound Red (SEPARATED)",
+		["zh-cn"] = "腐疫猎犬红色（已分离）",
+		ru = "Красный Гнилостных гончих (РАЗДЕЛЕНО)",
+	},
+	special_pox_hound_color_g = {
+		en = "Pox Hound Green (SEPARATED)",
+		["zh-cn"] = "腐疫猎犬绿色（已分离）",
+		ru = "Зелёный Гнилостных гончих (РАЗДЕЛЕНО)",
+	},
+	special_pox_hound_color_b = {
+		en = "Pox Hound Blue (SEPARATED)",
+		["zh-cn"] = "腐疫猎犬蓝色（已分离）",
+		ru = "Синий Гнилостных гончих (РАЗДЕЛЕНО)",
+	},
+	special_trapper_color_r = {
+		en = "Trapper Red (SEPARATED)",
+		["zh-cn"] = "陷阱手红色（已分离）",
+		ru = "Красный Ловцов (РАЗДЕЛЕНО)",
+	},
+	special_trapper_color_g = {
+		en = "Trapper Green (SEPARATED)",
+		["zh-cn"] = "陷阱手绿色（已分离）",
+		ru = "Зелёный Ловцов (РАЗДЕЛЕНО)",
+	},
+	special_trapper_color_b = {
+		en = "Trapper Blue (SEPARATED)",
+		["zh-cn"] = "陷阱手蓝色（已分离）",
+		ru = "Синий Ловцов (РАЗДЕЛЕНО)",
+	},
 	special_disabler_color_r = {
 		en = "Special Disabler Red",
 		["zh-cn"] = "专家控制红色",
@@ -312,21 +369,6 @@ local localization = {
 		en = "Monster Blue Component",
 		["zh-cn"] = "怪物蓝色分量",
 		ru = "Синяя составляющая монстра",
-	},
-	captain_color_r = {
-		en = "Captain Red Component",
-		["zh-cn"] = "队长红色分量",
-		ru = "Красная составляющая капитана",
-	},
-	captain_color_g = {
-		en = "Captain Green Component",
-		["zh-cn"] = "队长绿色分量",
-		ru = "Зелёная составляющая капитана",
-	},
-	captain_color_b = {
-		en = "Captain Blue Component",
-		["zh-cn"] = "队长蓝色分量",
-		ru = "Синяя составляющая капитана",
 	},
 }
 

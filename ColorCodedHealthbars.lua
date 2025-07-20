@@ -1,4 +1,4 @@
--- Color Coded Healthbars (Standalone Version) with Enemy Names and VISIBILITY CHECK
+-- Look whos snooping where they dont belong
 local mod = get_mod("ColorCodedHealthbars")
 
 -- Check if required modules are available
@@ -33,6 +33,7 @@ local show = {
 	always_show_healthbars = false,
 	show_enemy_names = false,
 	show_damage_numbers = false,
+	show_names_only = false,  -- NEW: Show only enemy names, hide health bars
 	max_display_range = 50,
 	healthbar_width = 120,
 	healthbar_height = 6,
@@ -79,10 +80,11 @@ local function update_colors_from_settings()
 		math.min(255, (mod:get("horde_color_g") or 150) + 30), 
 		math.min(255, (mod:get("horde_color_b") or 150) + 30) 
 	}
+	-- FIXED: Corrected captain color calculation to use all RGB components
 	mod.breed_colors.captain = { 
-		math.floor((mod:get("monster_color_r") or 255) / 2), 
-		0, 
-		math.floor((mod:get("monster_color_r") or 255) / 2) 
+		mod:get("captain_color_r") or math.floor((mod:get("monster_color_r") or 255) / 2), 
+		mod:get("captain_color_g") or math.floor((mod:get("monster_color_g") or 0) / 2), 
+		mod:get("captain_color_b") or math.floor((mod:get("monster_color_b") or 0) / 2) 
 	}
 	mod.breed_colors.elite_ranged = {
 		mod:get("elite_ranged_color_r") or 255,
@@ -98,6 +100,16 @@ local function update_colors_from_settings()
 		mod:get("special_sniper_color_r") or 255,
 		mod:get("special_sniper_color_g") or 0,
 		mod:get("special_sniper_color_b") or 200
+	}
+	mod.breed_colors.special_pox_hound = {
+		mod:get("special_pox_hound_color_r") or 200,
+		mod:get("special_pox_hound_color_g") or 0,
+		mod:get("special_pox_hound_color_b") or 255
+	}
+	mod.breed_colors.special_trapper = {
+		mod:get("special_trapper_color_r") or 180,
+		mod:get("special_trapper_color_g") or 0,
+		mod:get("special_trapper_color_b") or 255
 	}
 	mod.breed_colors.special_disabler = {
 		mod:get("special_disabler_color_r") or 200,
@@ -130,7 +142,10 @@ function mod.get_breed_color(unit)
 	local tags = breed.tags
 	local breed_name = breed.name
 	
-	if tags.elite then
+	-- FIXED: Add captain detection for both captain and cultist_captain tags
+	if tags.captain or tags.cultist_captain then
+		return mod.breed_colors.captain
+	elseif tags.elite then
 		if breed_name == "renegade_gunner" or breed_name == "renegade_shocktrooper" or 
 		   breed_name == "cultist_gunner" or breed_name == "chaos_ogryn_gunner" or
 		   breed_name == "cultist_shocktrooper" then
@@ -141,8 +156,10 @@ function mod.get_breed_color(unit)
 	elseif tags.special then
 		if breed_name == "renegade_sniper" then
 			return mod.breed_colors.special_sniper
-		elseif breed_name == "renegade_netgunner" or breed_name == "chaos_hound" then
-			return mod.breed_colors.special_disabler
+		elseif breed_name == "chaos_hound" then
+			return mod.breed_colors.special_pox_hound
+		elseif breed_name == "renegade_netgunner" then
+			return mod.breed_colors.special_trapper
 		elseif breed_name == "cultist_flamer" or breed_name == "renegade_flamer" or 
 		       breed_name == "cultist_mutant" or breed_name == "renegade_mutant" or
 		       breed_name == "chaos_spawn" or breed_name == "cultist_berzerker" or
@@ -155,8 +172,6 @@ function mod.get_breed_color(unit)
 		end
 	elseif tags.monster then
 		return mod.breed_colors.monster
-	elseif tags.captain then
-		return mod.breed_colors.captain
 	elseif tags.horde then
 		return mod.breed_colors.horde
 	elseif tags.roamer then
@@ -356,9 +371,9 @@ local function should_enable_healthbar(unit)
 	
 	local tags = breed.tags
 	
-	-- Simple checks based on settings
+	-- Simple checks based on settings - FIXED: Add cultist_captain check
+	if (tags.captain or tags.cultist_captain) and show.show_captain then return true end
 	if tags.monster and show.show_monster then return true end
-	if tags.captain and show.show_captain then return true end
 	if tags.elite and show.show_elite then return true end
 	if tags.special and show.show_special then return true end
 	if tags.horde and show.show_horde then return true end
@@ -445,6 +460,7 @@ local function get_toggles()
 	show.always_show_healthbars = get_setting_bool("always_show_healthbars", false)
 	show.show_enemy_names = get_setting_bool("show_enemy_names", false)
 	show.show_damage_numbers = get_setting_bool("show_damage_numbers", false)
+	show.show_names_only = get_setting_bool("show_names_only", false)  -- NEW: Names only mode
 	
 	-- Priority system settings
 	show.max_healthbars_shown = get_setting_num("max_healthbars_shown", 8)
@@ -750,6 +766,75 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	local health_percent = health_extension and health_extension:current_health_percent() or 0
 	local bar_logic = marker.bar_logic
 	
+	-- Hide healthbar if enemy is at full health and setting is enabled
+	if show.hide_full_health and health_percent >= 1 then
+		widget.alpha_multiplier = 0
+		return
+	end
+	
+	-- NEW: Names only mode - hide health bar elements but keep names visible
+	local names_only_mode = show.show_names_only
+	if names_only_mode then
+		-- Force enemy names to be visible in names-only mode
+		if style.name_text and style.name_text.color then
+			style.name_text.color[1] = 255  -- Make name visible
+			if content and not content.name_text then
+				content.name_text = get_enemy_display_name(unit)
+			end
+		end
+		
+		-- Hide all health bar related elements
+		if style.bar then style.bar.color[1] = 0 end
+		if style.background then style.background.color[1] = 0 end
+		if style.border then style.border.color[1] = 0 end
+		if style.health_indicator then style.health_indicator.color[1] = 0 end
+		if style.bar_end_left then style.bar_end_left.color[1] = 0 end
+		if style.bar_end_right then style.bar_end_right.color[1] = 0 end
+		
+		-- Still process tag indicators in names-only mode
+		local tag_type, tag_obj = get_unit_tag_info(unit)
+		if style.tag_border then
+			if show.show_tag_indicators and tag_type then
+				local border_color = get_tag_border_color(tag_type)
+				style.tag_border.color[1] = 255
+				style.tag_border.color[2] = border_color[2]
+				style.tag_border.color[3] = border_color[3]
+				style.tag_border.color[4] = border_color[4]
+			else
+				style.tag_border.color[1] = 0
+			end
+		end
+		
+		if style.tag_indicator and style.tag_indicator.color and content then
+			if show.show_tag_indicators and tag_type then
+				if tag_type == "companion_order" then
+					content.tag_indicator = "[DOG]"
+					style.tag_indicator.color[1] = 255
+					style.tag_indicator.color[2] = 255
+					style.tag_indicator.color[3] = 255
+					style.tag_indicator.color[4] = 0
+				elseif tag_type == "veteran_tag" then
+					content.tag_indicator = "[VET]"
+					style.tag_indicator.color[1] = 255
+					style.tag_indicator.color[2] = 255
+					style.tag_indicator.color[3] = 255
+					style.tag_indicator.color[4] = 0
+				elseif tag_type == "enemy_tag" then
+					content.tag_indicator = "[TAGGED]"
+					style.tag_indicator.color[1] = 255
+					style.tag_indicator.color[2] = 0
+					style.tag_indicator.color[3] = 255
+					style.tag_indicator.color[4] = 255
+				end
+			else
+				content.tag_indicator = ""
+				style.tag_indicator.color[1] = 0
+			end
+		end
+		
+		return  -- Skip normal health bar processing
+	end
+	
 	-- Remove marker if unit is dead
 	if not health_extension or not health_extension:is_alive() then
 		marker.remove = true
@@ -840,7 +925,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 			widget.alpha_multiplier = line_of_sight_progress
 		else
 			-- Reduce opacity but don't completely hide
-			widget.alpha_multiplier = math.max(line_of_sight_progress, 0.3)
+			widget.alpha_multiplier = math.max(line_of_sight_progress, 0.1)
 		end
 	else
 		-- Visibility check disabled - always show at full opacity
@@ -862,7 +947,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	
 	-- Update enemy name visibility based on cached settings
 	if style.name_text and style.name_text.color then
-		if show.show_enemy_names then
+		if show.show_enemy_names or show.show_names_only then  -- UPDATED: Show names in both modes
 			style.name_text.color[1] = 255  -- Make visible
 			-- Update name if it has changed
 			if content and not content.name_text then
@@ -976,8 +1061,6 @@ mod.on_setting_changed = function()
 	end
 end
 
--- ===== SIMPLE HOOKS LIKE THE WORKING MOD =====
-
 -- Register template with world markers system
 mod:hook_safe("HudElementWorldMarkers", "init", function(self)
 	self._marker_templates[template.name] = template
@@ -1076,7 +1159,7 @@ mod:command("cc_test", "Test color coded healthbars", function()
 	mod:echo("  Bar style: " .. show.bar_corner_style)
 	mod:echo("  Text shadow: " .. tostring(show.text_shadow_enabled))
 	mod:echo("  Text outline: " .. tostring(show.text_outline_enabled))
-	mod:echo("  Health gradient: " .. tostring(show.health_gradient) .. " (intensity: " .. show.gradient_intensity .. "%)")
+	mod:echo("  Health gradient: " .. tostring(show.health_gradient) .. " (intensity: " .. show.gradient_intensity .. "%%)")
 	mod:echo("  Smooth animations: " .. tostring(show.smooth_animations))
 	
 	mod:echo("Current breed type toggles:")
@@ -1085,6 +1168,9 @@ mod:command("cc_test", "Test color coded healthbars", function()
 			mod:echo("  " .. setting .. ": " .. tostring(value))
 		end
 	end
+	
+	mod:echo("FIXED: Captain color formula now uses all RGB components!")
+	mod:echo("FIXED: Cultist captains now properly detected!")
 end)
 
 mod:command("cc_scan", "Scan for existing units and add healthbars", function()
@@ -1131,6 +1217,37 @@ mod:command("cc_visibility", "Test visibility system", function()
 	else
 		mod:echo("Visibility checking is disabled - healthbars always visible")
 	end
+end)
+
+-- NEW: Command to test pox hound and trapper separation
+mod:command("cc_disablers", "Test Pox Hound and Trapper color separation", function()
+	mod:echo("=== Pox Hound vs Trapper Color Test ===")
+	mod:echo("Pox Hound (chaos_hound) color (R,G,B): " .. mod.breed_colors.special_pox_hound[1] .. "," .. mod.breed_colors.special_pox_hound[2] .. "," .. mod.breed_colors.special_pox_hound[3])
+	mod:echo("Trapper (renegade_netgunner) color (R,G,B): " .. mod.breed_colors.special_trapper[1] .. "," .. mod.breed_colors.special_trapper[2] .. "," .. mod.breed_colors.special_trapper[3])
+	mod:echo("Generic disabler color (R,G,B): " .. mod.breed_colors.special_disabler[1] .. "," .. mod.breed_colors.special_disabler[2] .. "," .. mod.breed_colors.special_disabler[3])
+	mod:echo("SEPARATED: Pox Hounds and Trappers now have individual color controls!")
+	mod:echo("Check 'Special Subcategory Colors' in mod settings to customize each one independently.")
+end)
+mod:command("cc_names", "Test names-only mode", function()
+	mod:echo("=== Names Only Mode Test ===")
+	mod:echo("Names only mode: " .. tostring(show.show_names_only))
+	mod:echo("Show enemy names: " .. tostring(show.show_enemy_names))
+	mod:echo("Show tag indicators: " .. tostring(show.show_tag_indicators))
+	
+	if show.show_names_only then
+		mod:echo("Names-only mode is ACTIVE - health bars are hidden!")
+		mod:echo("Enemy names will be visible with tag indicators if enabled")
+	else
+		mod:echo("Names-only mode is DISABLED - normal health bars shown")
+	end
+end)
+mod:command("cc_captain", "Test captain color system", function()
+	mod:echo("=== Captain Color System Test ===")
+	mod:echo("Monster color (R,G,B): " .. (mod:get("monster_color_r") or 255) .. "," .. (mod:get("monster_color_g") or 0) .. "," .. (mod:get("monster_color_b") or 0))
+	mod:echo("Captain color (R,G,B): " .. mod.breed_colors.captain[1] .. "," .. mod.breed_colors.captain[2] .. "," .. mod.breed_colors.captain[3])
+	mod:echo("Captain detection tags: captain=" .. tostring(show.show_captain) .. ", cultist_captain support=ENABLED")
+	mod:echo("FIXED: Now properly detects both 'captain' and 'cultist_captain' tags!")
+	mod:echo("FIXED: Captain color formula now divides ALL RGB components, not just red!")
 end)
 
 -- ===== KEYBIND FUNCTIONALITY =====
@@ -1197,10 +1314,12 @@ end)
 -- Startup message
 if mod:get("show_startup_messages") then
 	mod:echo("Color Coded Healthbars (Standalone with Visibility) loaded!")
+	mod:echo("FIXED: Captain color formula and cultist_captain detection!")
+	mod:echo("NEW: Pox Hounds and Trappers now have separate color controls!")
 	mod:echo("Simplified and reliable - works in both Meat Grinder and missions!")
 	mod:echo("NEW: Line of sight visibility checking - healthbars fade when enemies are behind walls!")
 	mod:echo("Enemy name display available - check mod settings")
 	mod:echo("Tag indicators available - shows [TAGGED] and [DOG] markers")
 	mod:echo("Type /cc_test to check mod status")
-	mod:echo("Type /cc_visibility to test visibility system")
+	mod:echo("Type /cc_captain to test captain color fixes")
 end
